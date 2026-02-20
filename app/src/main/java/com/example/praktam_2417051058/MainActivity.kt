@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
+fun Greeting(name: String, npm: String, modifier: Modifier = Modifier) {
     Text(
         text = "Halo, nama saya $name dengan NPM $npm siap belajar Compose!",
         modifier = modifier
