@@ -1,9 +1,11 @@
 package com.example.praktam_2417051058
 
+import Model.KucingSource
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -12,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.praktam_2417051058.ui.theme.PrakTAM_2417051058Theme
+import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,10 +36,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Greeting(name: String, npm: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Halo, nama saya $name dengan NPM $npm siap belajar Compose!",
-        modifier = modifier
-    )
+    val kucing = KucingSource.dummyKucing[0]
+
+    Column(modifier = Modifier.fillMaxSize().padding(all = 30.dp)) {
+        Text(text = "Nama : ${kucing.nama}")
+        Text(text = "Warna Bulu : ${kucing.warna}")
+        Text(text = "Tahun Lahir : ${kucing.tahunLahir}")
+    }
 }
 
 @Preview(showBackground = true)
