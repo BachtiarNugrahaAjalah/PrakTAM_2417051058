@@ -2,9 +2,11 @@ package com.example.praktam_2417051058
 
 import Model.Kegiatan
 import Model.KegiatanSource
+import android.R
 import com.example.praktam_2417051058.ui.theme.PurpleGrey40
 import android.os.Bundle
 import android.widget.Button
+import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -33,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
@@ -48,8 +52,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.materialIcon
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.Alignment
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,38 +88,53 @@ fun HeaderSection(){
 
 @Composable
 fun DashboardSection(){
-    val scrollState = rememberScrollState()
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
+            .padding(16.dp),
     ){
-        Column(
-            modifier = Modifier
-                .padding(0.dp, 10.dp, 0.dp, 0.dp)
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-        ) {
-            HeaderSection()
-            DaftarKegiatanScreen()
-        }
+        DaftarKegiatanScreen()
     }
 }
 
 @Composable
 fun DaftarKegiatanScreen() {
+    Column(modifier = Modifier.padding(top = 12.dp)) {
+        HeaderSection()
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding(),
+            contentPadding = PaddingValues(24.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            item {
+                Text(
+                    text = "Riwayat Hari Ini",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(5.dp)
-    ) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(KegiatanSource.dummyKegiatan) {
+                            kegiatan -> KegiatanRowItem(kegiatan = kegiatan)
+                    }
+                }
 
-        KegiatanSource.dummyKegiatan.forEach { kegiatan ->
-            DetailScreen(kegiatan = kegiatan)
-            Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(45.dp))
+
+                Text(
+                    text = "Kegiatan Hari Ini",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            items(KegiatanSource.dummyKegiatan) {
+                    kegiatan -> DetailScreen(kegiatan = kegiatan)
+            }
         }
     }
 }
@@ -118,7 +142,16 @@ fun DaftarKegiatanScreen() {
 @Composable
 fun DetailScreen(kegiatan: Kegiatan){
     var isDoing by remember {mutableStateOf(false)}
-    Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             Box(modifier = Modifier){
                 Image(
@@ -166,6 +199,41 @@ fun DetailScreen(kegiatan: Kegiatan){
                         tint = if (isDoing) Color.Green else Color.Black
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun KegiatanRowItem(kegiatan: Kegiatan){
+    Card(
+        modifier = Modifier.width(200.dp),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Row (
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top
+        ) {
+            Image(
+                painter = painterResource(id = kegiatan.ImageRes),
+                contentDescription = kegiatan.namaKegiatan,
+                modifier = Modifier
+                    .width(80.dp)
+                    .height(80.dp),
+                contentScale = ContentScale.Crop
+            )
+            Column(modifier = Modifier.padding(8.dp)){
+                Text(
+                    text = kegiatan.namaKegiatan,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = kegiatan.deskripsi,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
