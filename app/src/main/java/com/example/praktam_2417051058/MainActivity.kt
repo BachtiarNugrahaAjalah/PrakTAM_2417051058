@@ -66,7 +66,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PrakTAM_2417051058Theme {
-//                DaftarKegiatanScreen()
                 DashboardSection()
             }
         }
@@ -75,14 +74,23 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun HeaderSection(){
-    Column(modifier = Modifier.fillMaxWidth().background(PurpleGrey40, shape = RoundedCornerShape(5.dp) ).padding(20.dp)) {
+    Column(modifier = Modifier.fillMaxWidth()
+        .background(MaterialTheme.colorScheme.background, shape = RoundedCornerShape(5.dp))
+        .padding(20.dp)
+        ) {
+
         Text(
             text = "Hai, Pengguna",
-            fontSize = 20.sp,
+            style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = Color.White,
+            modifier = Modifier.padding(bottom = 5.dp)
         )
-        Text("Selamat Datang di LifePattern", color = Color.White)
+
+        Text("Selamat Datang di LifePattern",
+            color = MaterialTheme.colorScheme.onPrimary,
+            style = MaterialTheme.typography.titleMedium
+        )
     }
 }
 
@@ -209,7 +217,10 @@ fun KegiatanRowItem(kegiatan: Kegiatan){
     Card(
         modifier = Modifier.width(200.dp),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Row (
             modifier = Modifier.fillMaxWidth(),
