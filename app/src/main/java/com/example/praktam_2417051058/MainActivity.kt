@@ -1,12 +1,10 @@
 package com.example.praktam_2417051058
 
 import Model.Kegiatan
-import Model.KegiatanSource
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,10 +19,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,15 +33,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import coil.compose.AsyncImage
+import com.example.praktam_2417051058.Network.RetrofitClient
+import com.example.praktam_2417051058.ui.theme.PrakTAM_2417051058Theme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.example.praktam_2417051058.ui.theme.PrakTAM_2417051058Theme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,17 +54,32 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavigation(navController: NavHostController) {
+    var kegiatans by remember { mutableStateOf<List<Kegiatan>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var isError by remember { mutableStateOf(false) }
+
+    // Fetch data terpusat di sini
+    LaunchedEffect(Unit) {
+        try {
+            kegiatans = RetrofitClient.instance.getKegiatan()
+            isLoading = false
+            isError = false
+        } catch (e: Exception) {
+            isLoading = false
+            isError = true
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = "home"
     ) {
         composable("home") {
-            DashboardSection(navController)
+            DashboardSection(navController, kegiatans, isLoading, isError)
         }
-        // Perbaikan navigasi parameter: {nama}
         composable("detail/{nama}") { backStackEntry ->
             val nama = backStackEntry.arguments?.getString("nama")
-            val kegiatan = KegiatanSource.dummyKegiatan.find { it.namaKegiatan == nama }
+            val kegiatan = kegiatans.find { it.namaKegiatan == nama }
 
             if (kegiatan != null) {
                 DetailScreen(kegiatan = kegiatan, navController = navController, isFullScreen = true)
@@ -100,19 +111,32 @@ fun HeaderSection() {
 }
 
 @Composable
-fun DashboardSection(navController: NavController) {
+fun DashboardSection(navController: NavController, kegiatans: List<Kegiatan>, isLoading: Boolean, isError: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
             .padding(16.dp)
     ) {
-        DaftarKegiatanScreen(navController = navController)
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (isError || kegiatans.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Gagal Memuat Data", color = Color.Red, style = MaterialTheme.typography.titleLarge)
+                    Text("Pastikan koneksi internet menyala.", textAlign = TextAlign.Center)
+                }
+            }
+        } else {
+            DaftarKegiatanScreen(navController = navController, kegiatans = kegiatans)
+        }
     }
 }
 
 @Composable
-fun DaftarKegiatanScreen(navController: NavController) {
+fun DaftarKegiatanScreen(navController: NavController, kegiatans: List<Kegiatan>) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -129,7 +153,7 @@ fun DaftarKegiatanScreen(navController: NavController) {
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(KegiatanSource.dummyKegiatan) { kegiatan ->
+                items(kegiatans) { kegiatan ->
                     KegiatanRowItem(kegiatan = kegiatan, navController = navController)
                 }
             }
@@ -141,7 +165,7 @@ fun DaftarKegiatanScreen(navController: NavController) {
             )
         }
 
-        items(KegiatanSource.dummyKegiatan) { kegiatan ->
+        items(kegiatans) { kegiatan ->
             DetailScreen(kegiatan = kegiatan, navController = navController)
         }
     }
@@ -150,7 +174,7 @@ fun DaftarKegiatanScreen(navController: NavController) {
 @Composable
 fun DetailScreen(kegiatan: Kegiatan, navController: NavController, isFullScreen: Boolean = false) {
     var isDoing by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
+    var isProcessing by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -161,27 +185,32 @@ fun DetailScreen(kegiatan: Kegiatan, navController: NavController, isFullScreen:
             elevation = CardDefaults.cardElevation(4.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                // Gambar diletakkan di atas agar layout rapi
+                AsyncImage(
+                    model = kegiatan.imageUrl,
+                    contentDescription = null,
+                    placeholder = painterResource(id = R.drawable.olahraga),
+                    error = painterResource(id = R.drawable.tidur),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(if (isFullScreen) 200.dp else 120.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Image(
-                        painter = painterResource(id = kegiatan.ImageRes),
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = kegiatan.namaKegiatan,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        Text(
-                            text = "Waktu: ${kegiatan.waktu}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text(text = "Waktu: ${kegiatan.waktu}", style = MaterialTheme.typography.bodySmall)
                     }
                     IconButton(onClick = { isDoing = !isDoing }) {
                         Icon(
@@ -202,35 +231,29 @@ fun DetailScreen(kegiatan: Kegiatan, navController: NavController, isFullScreen:
 
                 Button(
                     onClick = {
-                        coroutineScope.launch {
-                            isLoading = true
-                            delay(2000)
-                            snackbarHostState.showSnackbar(
-                                "Kegiatan ${kegiatan.namaKegiatan} berhasil diselesaikan"
-                            )
-                            isLoading = false
+                        if (isFullScreen) {
+                            navController.popBackStack()
+                        } else {
+                            coroutineScope.launch {
+                                isProcessing = true
+                                delay(2000)
+                                snackbarHostState.showSnackbar("Kegiatan ${kegiatan.namaKegiatan} selesai!")
+                                isProcessing = false
+                            }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp), enabled = !isLoading
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    enabled = !isProcessing
                 ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Memproses....")
+                    if (isProcessing) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else {
-                        Text("Lakukan")
+                        Text(if (isFullScreen) "Kembali" else "Lakukan")
                     }
                 }
             }
         }
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
+        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
     }
 }
 
@@ -240,12 +263,15 @@ fun KegiatanRowItem(kegiatan: Kegiatan, navController: NavController) {
         modifier = Modifier
             .width(160.dp)
             .clickable { navController.navigate("detail/${kegiatan.namaKegiatan}") },
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column {
-            Image(
-                painter = painterResource(id = kegiatan.ImageRes),
+            AsyncImage(
+                model = kegiatan.imageUrl,
                 contentDescription = null,
+                placeholder = painterResource(id = R.drawable.olahraga),
+                error = painterResource(id = R.drawable.tidur),
                 modifier = Modifier.fillMaxWidth().height(100.dp),
                 contentScale = ContentScale.Crop
             )
