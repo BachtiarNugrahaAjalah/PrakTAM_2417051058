@@ -1,6 +1,6 @@
 package com.example.praktam_2417051058
 
-import Model.Kegiatan
+import com.example.praktam_2417051058.Data.Model.Kegiatan
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,10 +34,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
-import com.example.praktam_2417051058.Network.RetrofitClient
+import com.example.praktam_2417051058.Data.Api.RetrofitClient
 import com.example.praktam_2417051058.ui.theme.PrakTAM_2417051058Theme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.example.praktam_2417051058.Data.Repository.KegiatanRepository
+import android.util.Log
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,31 +56,26 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavigation(navController: NavHostController) {
-    var kegiatans by remember { mutableStateOf<List<Kegiatan>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var isError by remember { mutableStateOf(false) }
 
-    // Fetch data terpusat di sini
+    var kegiatans by remember { mutableStateOf<List<Kegiatan>>(emptyList()) }
+    val repository = remember { KegiatanRepository() }
+
     LaunchedEffect(Unit) {
         try {
-            kegiatans = RetrofitClient.instance.getKegiatan()
-            isLoading = false
-            isError = false
+            kegiatans = repository.getKegiatan()
         } catch (e: Exception) {
-            isLoading = false
-            isError = true
+            e.printStackTrace()
         }
     }
-
     NavHost(
         navController = navController,
         startDestination = "home"
     ) {
         composable("home") {
-            DashboardSection(navController, kegiatans, isLoading, isError)
+            DashboardSection(navController, kegiatans)
         }
-        composable("detail/{nama}") { backStackEntry ->
-            val nama = backStackEntry.arguments?.getString("nama")
+        composable("detail/{namaKegiatan}") { backStackEntry ->
+            val nama = backStackEntry.arguments?.getString("namaKegiatan")
             val kegiatan = kegiatans.find { it.namaKegiatan == nama }
 
             if (kegiatan != null) {
@@ -111,7 +108,16 @@ fun HeaderSection() {
 }
 
 @Composable
-fun DashboardSection(navController: NavController, kegiatans: List<Kegiatan>, isLoading: Boolean, isError: Boolean) {
+fun DashboardSection(navController: NavController, kegiatans: List<Kegiatan>) {
+    var isLoading by remember { mutableStateOf(true) }
+    var isError by remember { mutableStateOf(false) }
+    if (kegiatans.isEmpty()) {
+        isLoading = false
+        isError = true
+    } else {
+        isLoading = false
+        isError = false
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -122,7 +128,7 @@ fun DashboardSection(navController: NavController, kegiatans: List<Kegiatan>, is
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-        } else if (isError || kegiatans.isEmpty()) {
+        } else if (isError) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Gagal Memuat Data", color = Color.Red, style = MaterialTheme.typography.titleLarge)
@@ -130,13 +136,14 @@ fun DashboardSection(navController: NavController, kegiatans: List<Kegiatan>, is
                 }
             }
         } else {
-            DaftarKegiatanScreen(navController = navController, kegiatans = kegiatans)
+            DaftarKegiatanScreen(navController = navController, kegiatans)
         }
     }
 }
 
 @Composable
 fun DaftarKegiatanScreen(navController: NavController, kegiatans: List<Kegiatan>) {
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -178,6 +185,7 @@ fun DetailScreen(kegiatan: Kegiatan, navController: NavController, isFullScreen:
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
+
     Box(modifier = Modifier.fillMaxWidth()) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -185,12 +193,9 @@ fun DetailScreen(kegiatan: Kegiatan, navController: NavController, isFullScreen:
             elevation = CardDefaults.cardElevation(4.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                // Gambar diletakkan di atas agar layout rapi
                 AsyncImage(
-                    model = kegiatan.imageUrl,
+                    model = kegiatan.image_url,
                     contentDescription = null,
-                    placeholder = painterResource(id = R.drawable.olahraga),
-                    error = painterResource(id = R.drawable.tidur),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(if (isFullScreen) 200.dp else 120.dp)
@@ -268,7 +273,7 @@ fun KegiatanRowItem(kegiatan: Kegiatan, navController: NavController) {
     ) {
         Column {
             AsyncImage(
-                model = kegiatan.imageUrl,
+                model = kegiatan.image_url,
                 contentDescription = null,
                 placeholder = painterResource(id = R.drawable.olahraga),
                 error = painterResource(id = R.drawable.tidur),
