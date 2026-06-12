@@ -1,6 +1,6 @@
-package com.example.praktam_2417051058.Data.Repository
-import com.example.praktam_2417051058.Data.Api.RetrofitClient
-import com.example.praktam_2417051058.Data.Model.Kegiatan
+package com.example.praktam_2417051058.data.repository
+import com.example.praktam_2417051058.data.api_legacy.RetrofitClient
+import com.example.praktam_2417051058.data.model_legacy.Kegiatan
 
 class KegiatanRepository {
     suspend fun getKegiatan(): List<Kegiatan>{
